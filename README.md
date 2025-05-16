@@ -82,5 +82,9 @@ GPL-2.0 license
 Still updating! Issues and Pull Requests are super welcome—let’s make this game even more awesome together!
 
 ---
+## 🙏 Acknowledgements
+
+Thanks to the following sponsors for supporting this project:
+- [Serv00](https://serv00.com/) for providing the server
 
 _Last updated: May 2025_
