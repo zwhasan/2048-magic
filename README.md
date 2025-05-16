@@ -24,7 +24,7 @@ An enhanced version of the classic 2048 game, now with even more fun features! T
 - Never let a slip of the finger ruin your game again!
 
 ### 2. Secret Cheat Mode
-- Enter the magic sequence: ←←→→→→←← (that’s left, left, right, right, right, right, left, left)
+- Enter the magic sequence: ←←→→ →→←← (left, left, right, right,  right, right, left, left)
 - All tiles will magically turn into 128!
 - It’s an Easter egg, just for fun.
 - Pro tip: Cheating is fun, but don’t overdo it! 😉
