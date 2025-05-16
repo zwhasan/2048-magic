@@ -1,8 +1,6 @@
-# 2048++
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-（以下是默认语言内容）
 # 🎮 2048++
 
 An enhanced version of the classic 2048 game, now with even more fun features! This is a little project I whipped up in my spare time—hope it brings you some joy!
