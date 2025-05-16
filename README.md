@@ -1,6 +1,6 @@
 # 2048++
 
-[English](README.en.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 （以下是默认语言内容）
 # 🎮 2048++
