@@ -30,6 +30,9 @@
 ## 🎯 Demo
 
 🎯试玩：http://2048.qei.me:9969/
+![image](https://github.com/user-attachments/assets/8f8251df-ac5f-4dd7-9147-bb7e0c2652b0)
+
+
 
 ## 📁 项目结构
 ```
