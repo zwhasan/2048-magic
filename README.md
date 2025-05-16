@@ -71,7 +71,7 @@ python 2048.py
 
 ## 📝 许可证
 
-GPL 2.0
+GPL-2.0 license
 
 ## 🤝 贡献
 
