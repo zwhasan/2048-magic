@@ -91,6 +91,63 @@ function saveGameState() {
     localStorage.setItem('historyStack', JSON.stringify(historyStack));
 }
 
+// 检测合并状态
+function detectMerges(oldBoard, newBoard, direction) {
+    const merged = Array(4).fill().map(() => Array(4).fill(false));
+    
+    // 根据移动方向确定遍历顺序
+    const rows = direction === 'down' ? [3, 2, 1, 0] : [0, 1, 2, 3];
+    const cols = direction === 'right' ? [3, 2, 1, 0] : [0, 1, 2, 3];
+    
+    if (direction === 'left' || direction === 'right') {
+        // 水平移动
+        for (let i = 0; i < 4; i++) {
+            for (let j of cols) {
+                if (newBoard[i][j] !== 0 && newBoard[i][j] === oldBoard[i][j] * 2) {
+                    // 检查是否真的发生了合并
+                    const oldValue = oldBoard[i][j];
+                    const newValue = newBoard[i][j];
+                    if (oldValue !== 0 && newValue === oldValue * 2) {
+                        merged[i][j] = true;
+                    }
+                }
+            }
+        }
+    } else {
+        // 垂直移动
+        for (let j = 0; j < 4; j++) {
+            for (let i of rows) {
+                if (newBoard[i][j] !== 0 && newBoard[i][j] === oldBoard[i][j] * 2) {
+                    // 检查是否真的发生了合并
+                    const oldValue = oldBoard[i][j];
+                    const newValue = newBoard[i][j];
+                    if (oldValue !== 0 && newValue === oldValue * 2) {
+                        merged[i][j] = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    return merged;
+}
+
+// 计算分数变化
+function calculateScoreDifference(oldBoard, newBoard, direction) {
+    const merged = detectMerges(oldBoard, newBoard, direction);
+    let scoreChange = 0;
+    
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            if (merged[i][j]) {
+                scoreChange += newBoard[i][j];
+            }
+        }
+    }
+    
+    return scoreChange;
+}
+
 // 处理移动逻辑
 async function handleMove(direction) {
     // 保存当前状态到历史记录栈
@@ -131,7 +188,7 @@ async function handleMove(direction) {
         
         if (hasChanged) {
             // 计算分数变化
-            const scoreChange = calculateScoreDifference(oldBoard, data.board);
+            const scoreChange = calculateScoreDifference(oldBoard, data.board, direction);
             currentScore += scoreChange;
             
             // 更新分数显示
@@ -150,7 +207,7 @@ async function handleMove(direction) {
             saveGameState();
             
             // 更新UI，显示动画
-            updateBoardWithAnimation(oldBoard, board);
+            updateBoardWithAnimation(oldBoard, data.board, direction);
         }
 
         if (data.gameOver) {
@@ -167,32 +224,19 @@ async function handleMove(direction) {
 }
 
 // 通过对比找出变化的单元格并平滑更新
-function updateBoardWithAnimation(oldBoard, newBoard) {
+function updateBoardWithAnimation(oldBoard, newBoard, direction) {
     const gridContainer = document.getElementById('grid-container');
     const cells = Array.from(gridContainer.querySelectorAll('.cell'));
-    
-    // 先标记哪些单元格的值发生了变化
-    const changed = Array(4).fill().map(() => Array(4).fill(false));
-    
-    // 找出新增的单元格和改变值的单元格
-    for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-            if (newBoard[i][j] !== oldBoard[i][j]) {
-                changed[i][j] = true;
-            }
-        }
-    }
+    const merged = detectMerges(oldBoard, newBoard, direction);
     
     // 更新单元格内容并添加动画效果
     cells.forEach(cell => {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
         
-        if (changed[row][col]) {
-            // 如果是空变为非空或值发生变化
+        if (newBoard[row][col] !== oldBoard[row][col]) {
             if (newBoard[row][col] !== 0) {
-                // 如果是合并（值增大且不是新出现的2或4）
-                if (newBoard[row][col] > oldBoard[row][col] && oldBoard[row][col] !== 0) {
+                if (merged[row][col]) {
                     // 合并动画
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]} pulse`;
@@ -202,7 +246,7 @@ function updateBoardWithAnimation(oldBoard, newBoard) {
                         cell.classList.remove('pulse');
                     }, { once: true });
                 } else if (oldBoard[row][col] === 0) {
-                    // 新出现的滑块 (2或4) - 使用appear动画
+                    // 新出现的滑块动画
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]} appear`;
                     
@@ -211,7 +255,7 @@ function updateBoardWithAnimation(oldBoard, newBoard) {
                         cell.classList.remove('appear');
                     }, { once: true });
                 } else {
-                    // 其他值变化
+                    // 移动的滑块
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]}`;
                 }
@@ -313,19 +357,6 @@ function handleRestart() {
     setTimeout(() => {
         initGame();
     }, 10);
-}
-
-// 计算分数变化
-function calculateScoreDifference(oldBoard, newBoard) {
-    let scoreChange = 0;
-    for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-            if (newBoard[i][j] > oldBoard[i][j]) {
-                scoreChange += newBoard[i][j] - oldBoard[i][j];
-            }
-        }
-    }
-    return scoreChange;
 }
 
 // 显示游戏结束弹窗
