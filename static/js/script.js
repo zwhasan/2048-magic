@@ -2,48 +2,172 @@ let board = JSON.parse(localStorage.getItem('gameBoard')) || [];
 let currentScore = parseInt(localStorage.getItem('currentScore')) || 0;
 let bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
 
-// 撤销功能相关
+// Undo functionality
 let historyStack = JSON.parse(localStorage.getItem('historyStack')) || [];
 
-// 检测作弊模式的滑动序列
+// Cheat code sequence detection
 const cheatCode = ['left', 'left', 'right', 'right', 'right', 'right', 'left', 'left'];
 let inputSequence = [];
 
-// 是否处于作弊模式
+// Cheat mode state
 let isCheatMode = false;
 
-// 初始化游戏
-async function initGame() {
-    try {
-        const response = await fetch('/init');
-        const data = await response.json();
-        board = data.board;
-        currentScore = 0;
-        
-        // 从localStorage和cookie中获取最佳分数，并使用较大值
-        const cookieBestScore = parseInt(document.getElementById('best-score').textContent) || 0;
-        bestScore = Math.max(parseInt(localStorage.getItem('bestScore') || 0), cookieBestScore);
-        localStorage.setItem('bestScore', bestScore);
-        
-        historyStack = []; // 清空历史记录栈
+// Initialize board
+function initBoard() {
+    const board = Array(4).fill().map(() => Array(4).fill(0));
+    addRandomTile(board);
+    addRandomTile(board);
+    return board;
+}
 
-        updateUI(); // 更新界面显示
-        
-        // 更新分数显示
-        document.getElementById('current-score').textContent = currentScore;
-        document.getElementById('best-score').textContent = bestScore;
-        
-        // 保存游戏状态
-        saveGameState();
-    } catch (error) {
-        console.error('初始化游戏失败:', error);
+// Add random tile
+function addRandomTile(board) {
+    const emptyCells = [];
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            if (board[i][j] === 0) {
+                emptyCells.push([i, j]);
+            }
+        }
+    }
+    if (emptyCells.length) {
+        const [i, j] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+        board[i][j] = Math.random() < 0.9 ? 2 : 4;
     }
 }
 
-// 更新界面
+// Move logic
+function moveBoard(board, direction) {
+    const newBoard = board.map(row => [...row]);
+    const merged = Array(4).fill().map(() => Array(4).fill(false));
+
+    if (direction === 'up') {
+        for (let col = 0; col < 4; col++) {
+            for (let row = 1; row < 4; row++) {
+                if (newBoard[row][col] !== 0) {
+                    let currentRow = row;
+                    while (currentRow > 0 && newBoard[currentRow - 1][col] === 0) {
+                        newBoard[currentRow - 1][col] = newBoard[currentRow][col];
+                        newBoard[currentRow][col] = 0;
+                        currentRow--;
+                    }
+                    if (currentRow > 0 && newBoard[currentRow - 1][col] === newBoard[currentRow][col] && !merged[currentRow - 1][col]) {
+                        newBoard[currentRow - 1][col] *= 2;
+                        newBoard[currentRow][col] = 0;
+                        merged[currentRow - 1][col] = true;
+                    }
+                }
+            }
+        }
+    } else if (direction === 'down') {
+        for (let col = 0; col < 4; col++) {
+            for (let row = 2; row >= 0; row--) {
+                if (newBoard[row][col] !== 0) {
+                    let currentRow = row;
+                    while (currentRow < 3 && newBoard[currentRow + 1][col] === 0) {
+                        newBoard[currentRow + 1][col] = newBoard[currentRow][col];
+                        newBoard[currentRow][col] = 0;
+                        currentRow++;
+                    }
+                    if (currentRow < 3 && newBoard[currentRow + 1][col] === newBoard[currentRow][col] && !merged[currentRow + 1][col]) {
+                        newBoard[currentRow + 1][col] *= 2;
+                        newBoard[currentRow][col] = 0;
+                        merged[currentRow + 1][col] = true;
+                    }
+                }
+            }
+        }
+    } else if (direction === 'left') {
+        for (let row = 0; row < 4; row++) {
+            for (let col = 1; col < 4; col++) {
+                if (newBoard[row][col] !== 0) {
+                    let currentCol = col;
+                    while (currentCol > 0 && newBoard[row][currentCol - 1] === 0) {
+                        newBoard[row][currentCol - 1] = newBoard[row][currentCol];
+                        newBoard[row][currentCol] = 0;
+                        currentCol--;
+                    }
+                    if (currentCol > 0 && newBoard[row][currentCol - 1] === newBoard[row][currentCol] && !merged[row][currentCol - 1]) {
+                        newBoard[row][currentCol - 1] *= 2;
+                        newBoard[row][currentCol] = 0;
+                        merged[row][currentCol - 1] = true;
+                    }
+                }
+            }
+        }
+    } else if (direction === 'right') {
+        for (let row = 0; row < 4; row++) {
+            for (let col = 2; col >= 0; col--) {
+                if (newBoard[row][col] !== 0) {
+                    let currentCol = col;
+                    while (currentCol < 3 && newBoard[row][currentCol + 1] === 0) {
+                        newBoard[row][currentCol + 1] = newBoard[row][currentCol];
+                        newBoard[row][currentCol] = 0;
+                        currentCol++;
+                    }
+                    if (currentCol < 3 && newBoard[row][currentCol + 1] === newBoard[row][currentCol] && !merged[row][currentCol + 1]) {
+                        newBoard[row][currentCol + 1] *= 2;
+                        newBoard[row][currentCol] = 0;
+                        merged[row][currentCol + 1] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    const hasChanged = JSON.stringify(newBoard) !== JSON.stringify(board);
+    if (hasChanged) {
+        addRandomTile(newBoard);
+    }
+    return newBoard;
+}
+
+// Check if game is over
+function isGameOver(board) {
+    // Check for empty cells
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            if (board[i][j] === 0) return false;
+        }
+    }
+
+    // Check for possible merges
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            if (
+                (j < 3 && board[i][j] === board[i][j + 1]) ||
+                (i < 3 && board[i][j] === board[i + 1][j])
+            ) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Initialize game
+async function initGame() {
+    board = initBoard();
+    currentScore = 0;
+    
+    const cookieBestScore = parseInt(document.getElementById('best-score').textContent) || 0;
+    bestScore = Math.max(parseInt(localStorage.getItem('bestScore') || 0), cookieBestScore);
+    localStorage.setItem('bestScore', bestScore);
+    
+    historyStack = [];
+
+    updateUI();
+    
+    document.getElementById('current-score').textContent = currentScore;
+    document.getElementById('best-score').textContent = bestScore;
+    
+    saveGameState();
+}
+
+// Update UI
 function updateUI() {
     const gridContainer = document.getElementById('grid-container');
-    gridContainer.innerHTML = ''; // 清空棋盘
+    gridContainer.innerHTML = '';
 
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
@@ -60,30 +184,29 @@ function updateUI() {
         }
     }
     
-    // 根据单元格宽度调整字体大小
     adjustFontSize();
 }
 
-// 根据棋盘大小调整字体
+// Adjust font size based on board size
 function adjustFontSize() {
     const cells = document.querySelectorAll('.cell');
     const gridContainer = document.getElementById('grid-container');
-    const cellWidth = gridContainer.offsetWidth / 4 * 0.9; // 考虑间距后的单元格宽度
+    const cellWidth = gridContainer.offsetWidth / 4 * 0.9;
     
     cells.forEach(cell => {
         if (cell.textContent) {
             if (cell.textContent.length <= 2) {
-                cell.style.fontSize = `${cellWidth * 0.5}px`; // 1-2位数字
+                cell.style.fontSize = `${cellWidth * 0.5}px`;
             } else if (cell.textContent.length === 3) {
-                cell.style.fontSize = `${cellWidth * 0.4}px`; // 3位数字
+                cell.style.fontSize = `${cellWidth * 0.4}px`;
             } else {
-                cell.style.fontSize = `${cellWidth * 0.3}px`; // 4位及更多数字
+                cell.style.fontSize = `${cellWidth * 0.3}px`;
             }
         }
     });
 }
 
-// 保存游戏状态到localStorage
+// Save game state
 function saveGameState() {
     localStorage.setItem('gameBoard', JSON.stringify(board));
     localStorage.setItem('currentScore', currentScore);
@@ -91,20 +214,17 @@ function saveGameState() {
     localStorage.setItem('historyStack', JSON.stringify(historyStack));
 }
 
-// 检测合并状态
+// Detect merges
 function detectMerges(oldBoard, newBoard, direction) {
     const merged = Array(4).fill().map(() => Array(4).fill(false));
     
-    // 根据移动方向确定遍历顺序
     const rows = direction === 'down' ? [3, 2, 1, 0] : [0, 1, 2, 3];
     const cols = direction === 'right' ? [3, 2, 1, 0] : [0, 1, 2, 3];
     
     if (direction === 'left' || direction === 'right') {
-        // 水平移动
         for (let i = 0; i < 4; i++) {
             for (let j of cols) {
                 if (newBoard[i][j] !== 0 && newBoard[i][j] === oldBoard[i][j] * 2) {
-                    // 检查是否真的发生了合并
                     const oldValue = oldBoard[i][j];
                     const newValue = newBoard[i][j];
                     if (oldValue !== 0 && newValue === oldValue * 2) {
@@ -114,11 +234,9 @@ function detectMerges(oldBoard, newBoard, direction) {
             }
         }
     } else {
-        // 垂直移动
         for (let j = 0; j < 4; j++) {
             for (let i of rows) {
                 if (newBoard[i][j] !== 0 && newBoard[i][j] === oldBoard[i][j] * 2) {
-                    // 检查是否真的发生了合并
                     const oldValue = oldBoard[i][j];
                     const newValue = newBoard[i][j];
                     if (oldValue !== 0 && newValue === oldValue * 2) {
@@ -132,7 +250,7 @@ function detectMerges(oldBoard, newBoard, direction) {
     return merged;
 }
 
-// 计算分数变化
+// Calculate score difference
 function calculateScoreDifference(oldBoard, newBoard, direction) {
     const merged = detectMerges(oldBoard, newBoard, direction);
     let scoreChange = 0;
@@ -148,88 +266,58 @@ function calculateScoreDifference(oldBoard, newBoard, direction) {
     return scoreChange;
 }
 
-// 处理移动逻辑
+// Handle move
 async function handleMove(direction) {
-    // 保存当前状态到历史记录栈
     historyStack.push({
-        board: JSON.parse(JSON.stringify(board)), // 深拷贝当前棋盘
+        board: JSON.parse(JSON.stringify(board)),
         score: currentScore,
     });
     
-    // 保存历史记录到localStorage
     localStorage.setItem('historyStack', JSON.stringify(historyStack));
 
-    // 检查是否匹配作弊模式序列
     inputSequence.push(direction);
-    if (inputSequence.length > 8) inputSequence.shift(); // 只保留最近8次输入
+    if (inputSequence.length > 8) inputSequence.shift();
     if (JSON.stringify(inputSequence) === JSON.stringify(cheatCode)) {
         enterCheatMode();
         return;
     }
 
     const oldBoard = JSON.parse(JSON.stringify(board));
+    const newBoard = moveBoard(oldBoard, direction);
+    const hasChanged = JSON.stringify(newBoard) !== JSON.stringify(oldBoard);
     
-    try {
-        const response = await fetch('/move', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ direction, board: oldBoard }),
-        });
+    if (hasChanged) {
+        const scoreChange = calculateScoreDifference(oldBoard, newBoard, direction);
+        currentScore += scoreChange;
         
-        const data = await response.json();
-
-        if (data.error) {
-            console.error(data.error);
-            return;
-        }
-
-        // 检测是否有变化
-        const hasChanged = JSON.stringify(data.board) !== JSON.stringify(oldBoard);
+        document.getElementById('current-score').textContent = currentScore;
         
-        if (hasChanged) {
-            // 计算分数变化
-            const scoreChange = calculateScoreDifference(oldBoard, data.board, direction);
-            currentScore += scoreChange;
-            
-            // 更新分数显示
-            document.getElementById('current-score').textContent = currentScore;
-            
-            if (currentScore > bestScore) {
-                bestScore = currentScore;
-                localStorage.setItem('bestScore', bestScore);
-                document.getElementById('best-score').textContent = bestScore;
-            }
-            
-            // 更新当前棋盘数据
-            board = data.board;
-            
-            // 保存游戏状态
-            saveGameState();
-            
-            // 更新UI，显示动画
-            updateBoardWithAnimation(oldBoard, data.board, direction);
+        if (currentScore > bestScore) {
+            bestScore = currentScore;
+            localStorage.setItem('bestScore', bestScore);
+            document.getElementById('best-score').textContent = bestScore;
         }
+        
+        board = newBoard;
+        saveGameState();
+        updateBoardWithAnimation(oldBoard, newBoard, direction);
+    }
 
-        if (data.gameOver) {
-            setTimeout(() => {
-                showGameOverModal();
-                // 游戏结束时，确保撤销按钮仍然可点击
-                document.getElementById('undo-button').style.position = 'relative';
-                document.getElementById('undo-button').style.zIndex = '20';
-            }, 300); // 等待动画完成后显示游戏结束对话框
-        }
-    } catch (error) {
-        console.error('移动请求失败:', error);
+    if (isGameOver(newBoard)) {
+        setTimeout(() => {
+            showGameOverModal();
+            document.getElementById('undo-button').style.position = 'relative';
+            document.getElementById('undo-button').style.zIndex = '20';
+        }, 300);
     }
 }
 
-// 通过对比找出变化的单元格并平滑更新
+// Update board with animation
 function updateBoardWithAnimation(oldBoard, newBoard, direction) {
     const gridContainer = document.getElementById('grid-container');
     const cells = Array.from(gridContainer.querySelectorAll('.cell'));
     const merged = detectMerges(oldBoard, newBoard, direction);
     
-    // 更新单元格内容并添加动画效果
     cells.forEach(cell => {
         const row = parseInt(cell.dataset.row);
         const col = parseInt(cell.dataset.col);
@@ -237,50 +325,42 @@ function updateBoardWithAnimation(oldBoard, newBoard, direction) {
         if (newBoard[row][col] !== oldBoard[row][col]) {
             if (newBoard[row][col] !== 0) {
                 if (merged[row][col]) {
-                    // 合并动画
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]} pulse`;
                     
-                    // 动画结束后移除动画类
                     cell.addEventListener('animationend', () => {
                         cell.classList.remove('pulse');
                     }, { once: true });
                 } else if (oldBoard[row][col] === 0) {
-                    // 新出现的滑块动画
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]} appear`;
                     
-                    // 动画结束后移除动画类
                     cell.addEventListener('animationend', () => {
                         cell.classList.remove('appear');
                     }, { once: true });
                 } else {
-                    // 移动的滑块
                     cell.textContent = newBoard[row][col];
                     cell.className = `cell tile-${newBoard[row][col]}`;
                 }
             } else {
-                // 从有值变为空
                 cell.textContent = '';
                 cell.className = 'cell';
             }
         }
     });
     
-    // 调整字体大小
     adjustFontSize();
 }
 
-// 进入作弊模式
+// Enter cheat mode
 function enterCheatMode() {
     isCheatMode = true;
-    replaceAllTilesWith128(); // 替换所有非空格子为128
+    replaceAllTilesWith128();
     
-    // 显示作弊模式提示
     const gameContainer = document.getElementById('game-container');
     const cheatNotification = document.createElement('div');
     cheatNotification.id = 'cheat-notification';
-    cheatNotification.textContent = '作弊模式已激活!';
+    cheatNotification.textContent = 'Cheat mode activated!';
     cheatNotification.style.position = 'absolute';
     cheatNotification.style.top = '10px';
     cheatNotification.style.left = '50%';
@@ -292,7 +372,6 @@ function enterCheatMode() {
     cheatNotification.style.zIndex = '100';
     gameContainer.appendChild(cheatNotification);
     
-    // 3秒后自动退出作弊模式
     setTimeout(() => {
         exitCheatMode();
         if (cheatNotification.parentNode) {
@@ -301,83 +380,73 @@ function enterCheatMode() {
     }, 3000);
 }
 
-// 替换所有棋盘上的滑块为128
+// Replace all tiles with 128
 function replaceAllTilesWith128() {
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
             if (board[i][j] !== 0) {
-                board[i][j] = 128; // 修改为128
+                board[i][j] = 128;
             }
         }
     }
     updateUI();
 }
 
-// 退出作弊模式
+// Exit cheat mode
 function exitCheatMode() {
     isCheatMode = false;
 }
 
-// 撤销上一步操作
+// Undo move
 function undoMove() {
     if (historyStack.length === 0) {
-        alert("没有可以撤销的操作！");
+        alert("No moves to undo!");
         return;
     }
 
-    // 如果游戏结束弹窗正在显示，先隐藏它
     const modal = document.getElementById('game-over-modal');
     if (modal.style.display === 'block') {
         modal.style.display = 'none';
     }
 
-    const previousState = historyStack.pop(); // 弹出最近的历史状态
-    board = previousState.board; // 恢复棋盘
-    currentScore = previousState.score; // 恢复分数
+    const previousState = historyStack.pop();
+    board = previousState.board;
+    currentScore = previousState.score;
     
-    // 更新界面
     updateUI();
-    
-    // 更新分数显示
     document.getElementById('current-score').textContent = currentScore;
-    
-    // 保存游戏状态
     saveGameState();
 }
 
-// 重启游戏
+// Restart game
 function handleRestart() {
-    // 确保模态窗口关闭
     const modal = document.getElementById('game-over-modal');
     if (modal.style.display === 'block') {
         modal.style.display = 'none';
     }
     
-    // 重新初始化游戏
     setTimeout(() => {
         initGame();
     }, 10);
 }
 
-// 显示游戏结束弹窗
+// Show game over modal
 function showGameOverModal() {
     const modal = document.getElementById('game-over-modal');
     modal.style.display = 'block';
-    
-    // 确保Undo按钮在游戏结束时仍然可用
     document.getElementById('undo-button').style.zIndex = '20';
 }
 
-// 关闭游戏结束弹窗并重新开始游戏
+// Close game over modal and init game
 function initGameAndCloseModal() {
     const modal = document.getElementById('game-over-modal');
     modal.style.display = 'none';
     setTimeout(() => {
         initGame();
-    }, 10); // 短暂延迟确保模态窗口先关闭
+    }, 10);
 }
 
-// 监听键盘事件（PC端）
+// Keyboard events (PC)
 document.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'ArrowUp':
@@ -392,13 +461,13 @@ document.addEventListener('keydown', (event) => {
         case 'ArrowRight':
             handleMove('right');
             break;
-        case 'z': // 使用 'z' 键作为撤销快捷键
+        case 'z':
             undoMove();
             break;
     }
 });
 
-// 触摸事件处理（移动端）
+// Touch events (Mobile)
 let startX = 0;
 let startY = 0;
 
@@ -413,7 +482,6 @@ document.addEventListener('touchend', (event) => {
     const deltaX = endX - startX;
     const deltaY = endY - startY;
 
-    // 忽略很小的移动
     if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20) return;
 
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -431,29 +499,24 @@ document.addEventListener('touchend', (event) => {
     }
 });
 
-// 监听窗口大小变化，调整字体
+// Window resize event
 window.addEventListener('resize', adjustFontSize);
 
-// 页面加载时初始化游戏
+// Initialize on page load
 window.addEventListener('load', () => {
-    // 尝试从localStorage获取游戏状态
     const savedBoard = localStorage.getItem('gameBoard');
     
-    // 如果有保存的游戏状态，恢复游戏
     if (savedBoard && savedBoard !== '[]') {
         board = JSON.parse(savedBoard);
         currentScore = parseInt(localStorage.getItem('currentScore')) || 0;
         bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
         historyStack = JSON.parse(localStorage.getItem('historyStack')) || [];
         
-        // 更新界面
         updateUI();
         
-        // 更新分数显示
         document.getElementById('current-score').textContent = currentScore;
         document.getElementById('best-score').textContent = bestScore;
     } else {
-        // 否则初始化新游戏
         initGame();
     }
 });
