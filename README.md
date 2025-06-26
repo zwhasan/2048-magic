@@ -31,7 +31,7 @@ An enhanced version of the classic 2048 game, now with even more fun features! T
 
 ## 🎯 Demo
 
-🎯 Play here: [http://2048.qei.me:9969/](http://85.194.243.117:9969/)
+🎯 Play here: [http:/None/](http://#/)
 ![image](https://github.com/user-attachments/assets/d4fffe43-f970-4ce0-910e-a984d47f9353)
 
 
@@ -85,7 +85,7 @@ Still updating! Issues and Pull Requests are super welcome—let’s make this g
 ## 🙏 Acknowledgements
 
 Thanks to the following sponsors for supporting this project:
-- [Serv00](https://serv00.com/) for providing the server
+- [None](https://#/) for providing the server
 
 ---
 _Last updated: May 2025_
