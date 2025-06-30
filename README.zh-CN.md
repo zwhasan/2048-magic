@@ -30,7 +30,8 @@
 ## 🎯 Demo
 
 🎯试玩：http://2048.qei.me:9969/
-![image](https://github.com/user-attachments/assets/8f8251df-ac5f-4dd7-9147-bb7e0c2652b0)
+<img width="1279" alt="demo" src="https://github.com/user-attachments/assets/28fb9014-e52e-49b7-a413-a79b5f8749f0" />
+
 
 
 
