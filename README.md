@@ -32,7 +32,8 @@ An enhanced version of the classic 2048 game, now with even more fun features! T
 ## 🎯 Demo
 
 🎯 Play here: [http:/None/](http://#/)
-![image](https://github.com/user-attachments/assets/d4fffe43-f970-4ce0-910e-a984d47f9353)
+<img width="1279" alt="demo" src="https://github.com/user-attachments/assets/0df2c956-b6d9-4371-a916-f6ac3ae642be" />
+
 
 
 ## 📁 Project Structure
