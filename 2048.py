@@ -50,7 +50,7 @@ def move(board, direction):
                         new_board[temp_row + 1][col] *= 2
                         new_board[temp_row][col] = 0
                         merged[temp_row + 1][col] = True
-
+    #左
     elif direction == 'left':
         for row in range(4):
             for col in range(1, 4):
